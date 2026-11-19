@@ -25,22 +25,26 @@ jobs:
           cl /nologo /std:c++17 /O2 /EHsc /ISource Tests\dsp_test.cpp /Fe:dsp_test.exe
           .\dsp_test.exe
 
-      - name: Configurar (CMake + Visual Studio)
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+      - name: Configurar (CMake + Ninja + MSVC)
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Compilar VST3 (Release)
-        run: cmake --build build --config Release --target UltimateVocal_VST3 --parallel
+        run: cmake --build build --target UltimateVocal_VST3 --parallel
 
       - name: Compilar versión Standalone (para pruebas sin DAW)
-        run: cmake --build build --config Release --target UltimateVocal_Standalone --parallel
+        run: cmake --build build --target UltimateVocal_Standalone --parallel
 
       - name: Empaquetar
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item -Recurse "build\UltimateVocal_artefacts\Release\VST3\Ultimate Vocal.vst3" "dist\Ultimate Vocal.vst3"
-          Copy-Item "build\UltimateVocal_artefacts\Release\Standalone\Ultimate Vocal.exe" "dist\Ultimate Vocal (Standalone).exe"
+          $vst = Get-ChildItem -Path build -Recurse -Directory -Filter "Ultimate Vocal.vst3" | Select-Object -First 1
+          if (-not $vst) { throw "No se encontró Ultimate Vocal.vst3" }
+          Copy-Item -Recurse $vst.FullName "dist\Ultimate Vocal.vst3"
+          $exe = Get-ChildItem -Path build -Recurse -File -Filter "Ultimate Vocal.exe" | Select-Object -First 1
+          if ($exe) { Copy-Item $exe.FullName "dist\Ultimate Vocal (Standalone).exe" }
           Copy-Item INSTALL.md dist\LEEME.md
+          Get-ChildItem -Recurse dist | Select-Object FullName, Length
           Compress-Archive -Path "dist\*" -DestinationPath UltimateVocal-Windows-VST3.zip -Force
 
       - name: Subir artefacto

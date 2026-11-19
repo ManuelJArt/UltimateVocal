@@ -1,0 +1,57 @@
+name: Build Ultimate Vocal (Windows VST3)
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Entorno de compilación de Visual Studio
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Test del motor DSP
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++17 /O2 /EHsc /ISource Tests\dsp_test.cpp /Fe:dsp_test.exe
+          .\dsp_test.exe
+
+      - name: Configurar (CMake + Visual Studio)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compilar VST3 (Release)
+        run: cmake --build build --config Release --target UltimateVocal_VST3 --parallel
+
+      - name: Compilar versión Standalone (para pruebas sin DAW)
+        run: cmake --build build --config Release --target UltimateVocal_Standalone --parallel
+
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse "build\UltimateVocal_artefacts\Release\VST3\Ultimate Vocal.vst3" "dist\Ultimate Vocal.vst3"
+          Copy-Item "build\UltimateVocal_artefacts\Release\Standalone\Ultimate Vocal.exe" "dist\Ultimate Vocal (Standalone).exe"
+          Copy-Item INSTALL.md dist\LEEME.md
+          Compress-Archive -Path "dist\*" -DestinationPath UltimateVocal-Windows-VST3.zip -Force
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltimateVocal-Windows-VST3
+          path: UltimateVocal-Windows-VST3.zip
+          if-no-files-found: error
+
+      - name: Publicar release (solo con etiqueta vX.Y.Z)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: UltimateVocal-Windows-VST3.zip

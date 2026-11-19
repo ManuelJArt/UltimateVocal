@@ -1,0 +1,7 @@
+build/
+build-*/
+dist/
+*.zip
+.vs/
+.idea/
+CMakeUserPresets.json

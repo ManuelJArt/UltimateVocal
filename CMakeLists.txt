@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Runtime estático en Windows (sin depender de redistribuibles de VC++).
+# Debe definirse ANTES de añadir JUCE para que afecte a todos sus módulos.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # --- JUCE (descargado automáticamente) -------------------------------------
 include(FetchContent)
 FetchContent_Declare(
@@ -54,12 +58,6 @@ target_link_libraries(UltimateVocal
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
-
-# Runtime estático en Windows para no depender de redistribuibles de VC++
-if(MSVC)
-    set_property(TARGET UltimateVocal PROPERTY
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
 
 # --- Test del motor DSP (sin JUCE) ------------------------------------------
 option(UV_BUILD_DSP_TEST "Compila el test del motor DSP" OFF)
